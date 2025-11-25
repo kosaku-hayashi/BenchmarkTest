@@ -11,11 +11,15 @@ using System.Threading.Tasks;
 namespace BenchmarkApp;
 
 //[MinColumn, MaxColumn]
-//[SimpleJob(RuntimeMoniker.Net80)]
 //[AsciiDocExporter]
 //[HtmlExporter]
 [MemoryDiagnoser]
-[ShortRunJob]
+[SimpleJob(RuntimeMoniker.Net48)]
+[SimpleJob(RuntimeMoniker.Net60)]
+[SimpleJob(RuntimeMoniker.Net70)]
+[SimpleJob(RuntimeMoniker.Net80)]
+[SimpleJob(RuntimeMoniker.Net90)]
+[SimpleJob(RuntimeMoniker.Net10_0)]
 [MarkdownExporterAttribute.GitHub]
 public class ReflectionTest
 {

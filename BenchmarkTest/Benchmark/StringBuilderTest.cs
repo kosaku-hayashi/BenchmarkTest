@@ -157,6 +157,7 @@ public class StringBuilderTest
         return sb.ToString();
     }
 
+#if !NET48
     [Benchmark]
     public string RoopAsSpanAndStringHandler()
     {
@@ -196,4 +197,5 @@ public class StringBuilderTest
 
         return sb.ToString();
     }
+#endif
 }
