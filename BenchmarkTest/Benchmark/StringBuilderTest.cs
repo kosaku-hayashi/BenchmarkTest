@@ -29,6 +29,67 @@ public class StringBuilderTest
     //    this.Input = input;
     //}
 
+    /// <summary>
+    /// Represents the result of processing a single character during numeric string parsing.
+    /// </summary>
+    private enum CharProcessResult
+    {
+        Append,     // Character should be appended
+        Skip,       // Character should be skipped
+        Break       // Stop processing (e.g., second decimal point encountered)
+    }
+
+    /// <summary>
+    /// Tracks the state during numeric string parsing.
+    /// </summary>
+    private ref struct ParseState
+    {
+        public bool HasMinus;
+        public bool HasDot;
+        public int Length;
+
+        /// <summary>
+        /// Determines how to process a character during numeric string parsing.
+        /// </summary>
+        public CharProcessResult ProcessChar(char c)
+        {
+            if(char.IsDigit(c))
+            {
+                Length++;
+                return CharProcessResult.Append;
+            }
+            
+            if(c == '-' && Length == 0 && !HasMinus)
+            {
+                HasMinus = true;
+                Length++;
+                return CharProcessResult.Append;
+            }
+            
+            if(c == '.' && !HasDot)
+            {
+                HasDot = true;
+                Length++;
+                return CharProcessResult.Append;
+            }
+            
+            if(c == '.' && HasDot)
+            {
+                return CharProcessResult.Break;
+            }
+            
+            return CharProcessResult.Skip;
+        }
+
+        /// <summary>
+        /// Checks if the result should be empty (e.g., only a minus sign was parsed).
+        /// </summary>
+        public bool ShouldReturnEmpty(char firstChar)
+        {
+            return Length == 1 && firstChar == '-';
+        }
+    }
+
     [Benchmark]
     public string Default()
     {
@@ -38,35 +99,22 @@ public class StringBuilderTest
         }
 
         var sb = new StringBuilder();
-        bool hasMinus = false;
-        bool hasDot = false;
+        var state = new ParseState();
 
         foreach(var c in Input)
         {
-            if(char.IsDigit(c))
+            var result = state.ProcessChar(c);
+            if(result == CharProcessResult.Append)
             {
                 sb.Append(c);
             }
-            else if(c == '-' && sb.Length == 0 && !hasMinus)
+            else if(result == CharProcessResult.Break)
             {
-                sb.Append(c);
-                hasMinus = true;
-            }
-            else if(c == '.' && !hasDot)
-            {
-                sb.Append(c);
-                hasDot = true;
-            }
-            else
-            {
-                if(c == '.' && hasDot)
-                {
-                    break;
-                }
+                break;
             }
         }
 
-        if(sb.Length == 1 && sb[0] == '-')
+        if(sb.Length > 0 && state.ShouldReturnEmpty(sb[0]))
         {
             return string.Empty;
         }
@@ -83,38 +131,25 @@ public class StringBuilderTest
         }
 
         var sb = new StringBuilder();
-        bool hasMinus = false;
-        bool hasDot = false;
+        var state = new ParseState();
 
         var span = Input.AsSpan();
         int length = span.Length;
         for(int idx = 0; idx < length; idx++)
         {
             char c = span[idx];
-            if(char.IsDigit(c))
+            var result = state.ProcessChar(c);
+            if(result == CharProcessResult.Append)
             {
                 sb.Append(c);
             }
-            else if(c == '-' && sb.Length == 0 && !hasMinus)
+            else if(result == CharProcessResult.Break)
             {
-                sb.Append(c);
-                hasMinus = true;
-            }
-            else if(c == '.' && !hasDot)
-            {
-                sb.Append(c);
-                hasDot = true;
-            }
-            else
-            {
-                if(c == '.' && hasDot)
-                {
-                    break;
-                }
+                break;
             }
         }
 
-        if(sb.Length == 1 && sb[0] == '-')
+        if(sb.Length > 0 && state.ShouldReturnEmpty(sb[0]))
         {
             return string.Empty;
         }
@@ -131,42 +166,30 @@ public class StringBuilderTest
         }
 
         var sb = new DefaultInterpolatedStringHandler(0,0);
-        int sbLength = 0;
-        bool hasMinus = false;
-        bool hasDot = false;
+        var state = new ParseState();
+        char firstChar = '\0';
 
         var span = Input.AsSpan();
         int length = span.Length;
         for(int idx = 0; idx < length; idx++)
         {
             char c = span[idx];
-            if(char.IsDigit(c))
+            var result = state.ProcessChar(c);
+            if(result == CharProcessResult.Append)
             {
-                sb.AppendFormatted(c);
-                sbLength++;
-            }
-            else if(c == '-' && sbLength == 0 && !hasMinus)
-            {
-                sb.AppendFormatted(c);
-                sbLength++;
-                hasMinus = true;
-            }
-            else if(c == '.' && !hasDot)
-            {
-                sb.AppendFormatted(c);
-                sbLength++;
-                hasDot = true;
-            }
-            else
-            {
-                if(c == '.' && hasDot)
+                if(state.Length == 1)
                 {
-                    break;
+                    firstChar = c;
                 }
+                sb.AppendFormatted(c);
+            }
+            else if(result == CharProcessResult.Break)
+            {
+                break;
             }
         }
 
-        if(sbLength == 1 && span[0] == '-')
+        if(state.ShouldReturnEmpty(firstChar))
         {
             return string.Empty;
         }
